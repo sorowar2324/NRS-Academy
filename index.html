@@ -1,146 +1,1775 @@
 <!DOCTYPE html>
 <html lang="bn">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NRS Academy - Tuition Manager</title>
-    <!-- Tailwind CSS for Modern & Responsive Design -->
-    <script src="https://jsdelivr.net"></script>
-    <!-- FontAwesome for Icons -->
-    <link rel="stylesheet" href="https://cloudflare.com">
-</head>
-<body class="bg-gray-50 font-sans text-gray-800 pb-16">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>NRS Academy — Complete Management</title>
 
-    <!-- TOP NAVBAR -->
-    <nav class="bg-gradient-to-r content-center from-indigo-700 to-blue-600 text-white px-4 py-4 sticky top-0 shadow-md z-50 flex justify-between items-center">
+    <!-- PWA META -->
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#1e3a5f" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="NRS Academy" />
+    <link rel="apple-touch-icon" href="icon-192.png" />
+
+    <!-- Tailwind + Chart.js + jsPDF -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+    <style>
+        /* Install Banner */
+        #installBanner {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #1e3a5f;
+            color: #fff;
+            padding: 14px 20px;
+            z-index: 9999;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
+            animation: slideUp 0.5s ease;
+        }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        #installBanner .install-btn { background: #4f46e5; border: none; color: #fff; padding: 8px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        #installBanner .close-btn { background: rgba(255,255,255,0.2); border: none; color: #fff; padding: 6px 12px; border-radius: 8px; cursor: pointer; }
+
+        /* Notification */
+        .notification-toast {
+            position: fixed; top: 20px; right: 20px; background: #fff; border-left: 4px solid #4f46e5;
+            padding: 16px 20px; border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+            z-index: 10000; max-width: 350px; animation: slideInRight 0.5s ease; display: none;
+        }
+        @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* General */
+        .animate-fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        .stat-card { transition: all 0.3s ease; cursor: pointer; }
+        .stat-card:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(0,0,0,0.08); }
+        .gradient-bg { background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); }
+        .gradient-bg-student { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); }
+        .tab-active { border-bottom: 3px solid #4f46e5; color: #4f46e5; font-weight: bold; }
+        .tab-inactive { border-bottom: 3px solid transparent; color: #6b7280; }
+        .tab-btn { transition: all 0.3s ease; cursor: pointer; padding: 10px 16px; font-size: 13px; }
+        .tab-btn:hover { background: #f3f4f6; }
+        .attendance-btn { transition: all 0.2s ease; cursor: pointer; }
+        .attendance-btn:hover { transform: scale(1.05); }
+        .student-card { transition: all 0.2s ease; }
+        .student-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.06); }
+        .status-badge { padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; }
+        .status-active { background: #d1fae5; color: #065f46; }
+        .status-inactive { background: #fee2e2; color: #991b1b; }
+        .status-paid { background: #d1fae5; color: #065f46; }
+        .status-due { background: #fef3c7; color: #92400e; }
+        .sync-status { font-size: 10px; padding: 2px 8px; border-radius: 10px; }
+        .sync-online { background: #d1fae5; color: #065f46; }
+        .sync-offline { background: #fee2e2; color: #991b1b; }
+
+        #loginScreen { display: block; }
+        #studentDashboard { display: none; }
+        #adminDashboard { display: none; }
+        #profileModal { display: none; }
+        #paymentModal { display: none; }
+
+        @media print { .no-print { display: none !important; } }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+    </style>
+</head>
+<body>
+
+    <!-- ===== PWA INSTALL BANNER ===== -->
+    <div id="installBanner">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <i class="fa-solid fa-graduation-cap text-2xl"></i>
+                <div>
+                    <div class="font-bold text-sm">NRS Academy অ্যাপ</div>
+                    <div class="text-xs opacity-80">ইনস্টল করুন &amp; দ্রুত ব্যবহার করুন</div>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button class="install-btn" onclick="installPWA()"><i class="fa-solid fa-download mr-1"></i> ইনস্টল</button>
+                <button class="close-btn" onclick="closeInstallBanner()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== NOTIFICATION TOAST ===== -->
+    <div id="notificationToast" class="notification-toast">
+        <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 flex-shrink-0">
+                <i class="fa-solid fa-bell"></i>
+            </div>
+            <div class="flex-1">
+                <div class="notif-title" id="notifTitle">নতুন আপডেট!</div>
+                <div class="notif-body" id="notifBody">আপনার নতুন মার্কস যোগ করা হয়েছে।</div>
+                <div class="notif-time" id="notifTime">এখনই</div>
+            </div>
+            <button onclick="closeNotification()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+    </div>
+
+    <!-- ===== TOP NAVBAR ===== -->
+    <nav class="gradient-bg text-white px-4 py-3 sticky top-0 shadow-lg z-50 flex justify-between items-center no-print">
         <div class="flex items-center gap-2">
             <i class="fa-solid fa-graduation-cap text-2xl"></i>
             <span class="font-bold text-lg tracking-wide">NRS Academy</span>
+            <span id="userTypeBadge" class="text-[10px] bg-white/20 px-2 py-0.5 rounded-full hidden"></span>
+            <span id="syncStatus" class="sync-status sync-online"><i class="fa-solid fa-cloud"></i> Cloud</span>
         </div>
-        <button id="logoutBtn" onclick="logout()" class="hidden bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow transition">
-            <i class="fa-solid fa-right-from-bracket mr-1"></i> লগআউট
-        </button>
+        <div class="flex items-center gap-2">
+            <button onclick="syncData()" class="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5">
+                <i class="fa-solid fa-sync"></i> <span class="hidden sm:inline">সিঙ্ক</span>
+            </button>
+            <button id="shareBtn" onclick="shareDashboard()" class="hidden bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5">
+                <i class="fa-solid fa-share-nodes"></i> <span class="hidden sm:inline">শেয়ার</span>
+            </button>
+            <button onclick="logout()" class="bg-red-500/80 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5">
+                <i class="fa-solid fa-right-from-bracket"></i> <span class="hidden sm:inline">লগআউট</span>
+            </button>
+        </div>
     </nav>
 
-    <!-- MAIN CONTAINER -->
-    <main class="max-w-md mx-auto p-4">
+    <!-- ===== MAIN ===== -->
+    <main class="max-w-6xl mx-auto">
 
-        <!-- 1. LANDING / LOGIN SCREEN -->
-        <section id="loginScreen" class="space-y-6 pt-6 animate-fade-in">
+        <!-- ===== LOGIN SCREEN ===== -->
+        <section id="loginScreen" class="max-w-md mx-auto p-4 space-y-6 pt-10 animate-fade-in">
             <div class="text-center space-y-2">
-                <h1 class="text-2xl font-black text-indigo-900">Tuition Manager</h1>
-                <p class="text-gray-500 text-sm">হাজিরা, মার্কস এবং পেমেন্ট ট্র্যাকিং সিস্টেম</p>
+                <div class="w-20 h-20 bg-gradient-to-br from-indigo-600 to-blue-600 rounded-2xl flex items-center justify-center mx-auto shadow-lg">
+                    <i class="fa-solid fa-graduation-cap text-3xl text-white"></i>
+                </div>
+                <h1 class="text-2xl font-black text-gray-800">NRS Academy</h1>
+                <p class="text-gray-500 text-sm">Complete Tuition Management</p>
+                <p class="text-xs text-indigo-500 mt-1" id="pwaStatus">🌐 PWA সংস্করণ</p>
+                <p id="firebaseStatus" class="text-xs text-green-600">☁️ Cloud Connected</p>
             </div>
 
-            <!-- Student Login Card -->
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+            <!-- Student Login -->
+            <div class="bg-white p-5 rounded-2xl shadow-lg border border-gray-100 space-y-4">
                 <div class="flex items-center gap-2 border-b border-gray-100 pb-2">
                     <i class="fa-solid fa-user-graduate text-indigo-600 text-xl"></i>
                     <h2 class="font-bold text-gray-700">শিক্ষার্থী লগইন</h2>
                 </div>
-                <div class="space-y-2">
-                    <label class="text-xs font-bold text-gray-500 block">স্টুডেন্ট আইডি (Student ID)</label>
-                    <input type="text" id="studentIdInput" placeholder="উদাঃ S101, S102" class="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-xs font-bold text-gray-500 block">স্টুডেন্ট আইডি</label>
+                        <input type="text" id="studentIdInput" placeholder="যেমন: S101" class="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-gray-500 block">পাসওয়ার্ড</label>
+                        <input type="password" id="studentPasswordInput" placeholder="পাসওয়ার্ড দিন" class="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                    </div>
                 </div>
                 <button onclick="studentLogin()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition">
-                    তথ্য দেখুন <i class="fa-solid fa-arrow-right ml-1"></i>
+                    <i class="fa-solid fa-arrow-right mr-1"></i> লগইন করুন
                 </button>
+                <div class="text-center">
+                    <a href="#" onclick="showPasswordHelp()" class="text-xs text-indigo-500 hover:underline">পাসওয়ার্ড ভুলে গেছেন?</a>
+                </div>
             </div>
 
-            <!-- Admin/Teacher Login Card -->
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 space-y-4">
+            <!-- Admin Login -->
+            <div class="bg-white p-5 rounded-2xl shadow-lg border border-gray-100 space-y-4">
                 <div class="flex items-center gap-2 border-b border-gray-100 pb-2">
                     <i class="fa-solid fa-chalkboard-user text-blue-600 text-xl"></i>
-                    <h2 class="font-bold text-gray-700">শিক্ষক প্যানেল (Admin)</h2>
+                    <h2 class="font-bold text-gray-700">শিক্ষক প্যানেল</h2>
                 </div>
                 <div class="space-y-2">
-                    <label class="text-xs font-bold text-gray-500 block">অ্যাডমিন পাসওয়ার্ড</label>
-                    <input type="password" id="adminPasswordInput" placeholder="পাসওয়ার্ড দিন (default: admin123)" class="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                    <label class="text-xs font-bold text-gray-500 block">পাসওয়ার্ড</label>
+                    <div class="relative">
+                        <input type="password" id="adminPasswordInput" placeholder="পাসওয়ার্ড দিন" class="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm pr-10">
+                        <button onclick="togglePasswordVisibility()" type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                            <i id="passwordEyeIcon" class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
                 </div>
                 <button onclick="adminLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl text-sm shadow-md transition">
-                    শিক্ষক লগইন <i class="fa-solid fa-lock-open ml-1"></i>
+                    <i class="fa-solid fa-lock-open mr-1"></i> অ্যাডমিন লগইন
                 </button>
-            </div>
-
-            <!-- About Section Embedded -->
-            <div class="bg-gradient-to-br from-gray-800 to-slate-900 p-5 rounded-2xl text-white space-y-3 shadow-lg shadow-gray-200">
-                <h3 class="font-black text-amber-400 flex items-center gap-1.5"><i class="fa-solid fa-circle-info"></i> অ্যাপ সম্পর্কে (About Us)</h3>
-                <p class="text-xs leading-relaxed text-gray-300">
-                    <strong>NRS Academy - Tuition Manager</strong> হচ্ছে একটি আধুনিক ওয়েব অ্যাপ্লিকেশন। এর মাধ্যমে একজন শিক্ষক খুব সহজে তার শিক্ষার্থীদের আইডি ভিত্তিক ডিজিটাল ডেটাবেজ মেইনটেইন করতে পারেন। শিক্ষার্থীরা যেকোনো সময় যেকোনো স্থান থেকে তাদের আইডি ব্যবহার করে লাইভ প্রোগ্রেস ও পেমেন্ট হিস্ট্রি চেক করতে পারবে। কোনো খাতা বা কাগজের ঝামেলা ছাড়াই পুরো টিউশন ম্যানেজ করার এটি একটি স্মার্ট সমাধান।
-                </p>
-                <div class="text-[10px] text-gray-400 pt-2 border-t border-gray-700 text-center">Developed by Sorowar &copy; 2026</div>
             </div>
         </section>
 
-        <!-- 2. STUDENT DASHBOARD SCREEN -->
-        <section id="studentDashboard" class="hidden space-y-5 animate-fade-in">
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden">
-                <div class="absolute top-0 right-0 w-24 h-24 bg-indigo-50 rounded-full -mr-6 -mt-6 z-0"></div>
-                <div class="relative z-10 space-y-2">
-                    <span class="bg-indigo-100 text-indigo-700 font-bold text-[10px] px-2.5 py-1 rounded-full uppercase" id="cardStuId">ID: S101</span>
-                    <h2 class="text-xl font-black text-gray-800 pt-1" id="cardStuName">মোঃ আব্দুল্লাহ</h2>
-                    <div class="grid grid-cols-2 gap-2 text-xs pt-1 text-gray-500 font-medium">
-                        <div><i class="fa-solid fa-school text-indigo-500 mr-1"></i> ক্লাস: <span id="cardStuClass" class="text-gray-800 font-bold">Class 9</span></div>
-                        <div><i class="fa-solid fa-list-ol text-indigo-500 mr-1"></i> রোল: <span id="cardStuRoll" class="text-gray-800 font-bold">05</span></div>
+        <!-- ===== STUDENT DASHBOARD ===== -->
+        <section id="studentDashboard" class="p-4 animate-fade-in">
+            <div class="max-w-2xl mx-auto space-y-5">
+                <div class="gradient-bg-student rounded-2xl p-6 text-white relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -mr-24 -mt-24"></div>
+                    <div class="absolute bottom-0 left-0 w-32 h-32 bg-white/5 rounded-full -ml-16 -mb-16"></div>
+                    <div class="relative z-10">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <img id="stuPhoto" src="" alt="Photo" class="w-16 h-16 rounded-full border-2 border-white/30 object-cover bg-white/20">
+                                <div>
+                                    <p class="text-sm text-white/70">স্বাগতম 👋</p>
+                                    <h2 class="text-2xl font-black" id="stuName">মোঃ আব্দুল্লাহ</h2>
+                                    <p class="text-xs text-white/60 mt-1" id="stuId">ID: S101</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xs text-white/60">ক্লাস</p>
+                                <p class="text-sm font-bold" id="stuClass">Class 9</p>
+                                <p class="text-xs text-white/60" id="stuBatch">Batch: A</p>
+                            </div>
+                        </div>
+                        <div class="mt-3 flex gap-3 text-xs flex-wrap">
+                            <span class="bg-white/20 px-3 py-1 rounded-full"><i class="fa-regular fa-user mr-1"></i> রোল: <span id="stuRoll">05</span></span>
+                            <span class="bg-white/20 px-3 py-1 rounded-full"><i class="fa-regular fa-calendar mr-1"></i> <span id="stuDate"></span></span>
+                            <span class="bg-white/20 px-3 py-1 rounded-full"><i class="fa-regular fa-clock mr-1"></i> <span id="stuAdmissionDate"></span></span>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Student Metrics Cards Grid -->
-            <div class="grid grid-cols-2 gap-3">
-                <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-xs flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-lg bg-green-50 flex items-center justify-center text-green-600"><i class="fa-solid fa-calendar-check text-lg"></i></div>
-                    <div>
-                        <div class="text-[10px] font-bold text-gray-400 uppercase">উপস্থিতি (Present)</div>
-                        <div class="text-lg font-black text-gray-800" id="cardStuAttendance">00 দিন</div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-gray-400 font-bold">উপস্থিতি</span>
+                            <i class="fa-solid fa-calendar-check text-green-500"></i>
+                        </div>
+                        <div class="text-2xl font-black text-green-600 mt-1" id="stuAttendance">22 দিন</div>
+                        <div class="text-xs text-gray-400" id="stuAttendancePercent">87.5%</div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-gray-400 font-bold">প্রাপ্ত মার্কস</span>
+                            <i class="fa-solid fa-star text-amber-500"></i>
+                        </div>
+                        <div class="text-2xl font-black text-amber-600 mt-1" id="stuMarks">87 / 100</div>
                     </div>
                 </div>
-                <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-xs flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600"><i class="fa-solid fa-star text-lg"></i></div>
-                    <div>
-                        <div class="text-[10px] font-bold text-gray-400 uppercase">প্রাপ্ত মার্কস (Marks)</div>
-                        <div class="text-lg font-black text-gray-800" id="cardStuMarks">00 / 100</div>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Payment Information Card -->
-            <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-xs space-y-3">
-                <div class="flex items-center justify-between border-b border-gray-50 pb-2">
-                    <h3 class="text-xs font-bold text-gray-400 uppercase flex items-center gap-1.5"><i class="fa-solid fa-money-check-dollar text-emerald-600"></i> পেমেন্ট স্ট্যাটাস (Payment)</h3>
-                    <span id="cardStuPayStatus" class="text-[10px] font-bold px-2 py-0.5 rounded-full">পরিশোধিত</span>
+                <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm space-y-3">
+                    <div class="flex items-center justify-between border-b border-gray-50 pb-2">
+                        <h3 class="text-xs font-bold text-gray-400 uppercase flex items-center gap-1.5">
+                            <i class="fa-solid fa-money-check-dollar text-emerald-600"></i> পেমেন্ট স্ট্যাটাস
+                        </h3>
+                        <span id="stuPayStatus" class="text-[10px] font-bold px-2 py-0.5 rounded-full">পরিশোধিত</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 text-center">
+                        <div><p class="text-[10px] text-gray-400">মাসিক ফি</p><p class="text-sm font-bold text-gray-700" id="stuFee">৳ 2500</p></div>
+                        <div><p class="text-[10px] text-gray-400">পরিশোধ</p><p class="text-sm font-bold text-emerald-600" id="stuPaid">৳ 2500</p></div>
+                        <div><p class="text-[10px] text-gray-400">বাকি</p><p class="text-sm font-bold text-red-600" id="stuDue">৳ 0</p></div>
+                    </div>
                 </div>
-                <div class="flex justify-between items-center">
-                    <div class="text-sm font-semibold text-gray-600">চলতি মাসের ফি:</div>
-                    <div class="text-xl font-black text-emerald-600" id="cardStuPayment">৳ 0.00</div>
+
+                <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                    <h3 class="font-bold text-sm text-gray-700 mb-3"><i class="fa-regular fa-address-card text-indigo-500 mr-1"></i> অভিভাবকের তথ্য</h3>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between border-b border-gray-50 pb-2"><span class="text-gray-500">অভিভাবকের নাম</span><span class="font-semibold" id="stuGuardian">---</span></div>
+                        <div class="flex justify-between"><span class="text-gray-500">অভিভাবকের ফোন</span><span class="font-semibold" id="stuGuardianPhone">---</span></div>
+                    </div>
                 </div>
+
+                <button onclick="viewStudentProfile()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl text-sm transition">
+                    <i class="fa-regular fa-eye mr-1"></i> সম্পূর্ণ প্রোফাইল দেখুন
+                </button>
             </div>
         </section>
 
-        <!-- 3. TEACHER / ADMIN SCREEN -->
-        <section id="adminDashboard" class="hidden space-y-5 animate-fade-in">
-            <div class="flex items-center justify-between">
-                <h2 class="text-lg font-black text-gray-800"><i class="fa-solid fa-users text-blue-600 mr-1"></i> শিক্ষার্থী তালিকা</h2>
-                <button onclick="toggleAddModal(true)" class="bg-blue-600 text-white font-bold text-xs px-3 py-2 rounded-xl shadow-sm hover:bg-blue-700 transition">
-                    <i class="fa-solid fa-user-plus mr-1"></i> নতুন ছাত্র যোগ করুন
-                </button>
-            </div>
+        <!-- ===== ADMIN DASHBOARD ===== -->
+        <section id="adminDashboard" class="hidden animate-fade-in">
+            <div class="max-w-5xl mx-auto p-4">
 
-            <!-- Student Records Admin Cards Wrapper -->
-            <div id="adminStudentList" class="space-y-3">
-                <!-- Dynamically Inserted Admin Student Rows -->
+                <!-- Stats -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+                    <div class="stat-card bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-gray-400 font-bold">মোট শিক্ষার্থী</span>
+                            <i class="fa-solid fa-users text-indigo-500 text-lg"></i>
+                        </div>
+                        <div class="text-2xl font-black text-gray-800 mt-1" id="adminTotalStudents">0</div>
+                        <div class="text-[10px] text-gray-400">সকল ক্লাস মিলিয়ে</div>
+                    </div>
+                    <div class="stat-card bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-gray-400 font-bold">উপস্থিত (আজ)</span>
+                            <i class="fa-solid fa-user-check text-emerald-500 text-lg"></i>
+                        </div>
+                        <div class="text-2xl font-black text-emerald-600 mt-1" id="adminPresent">0</div>
+                        <div class="text-[10px] text-gray-400"><span id="adminPresentPercent">0%</span> উপস্থিতি</div>
+                    </div>
+                    <div class="stat-card bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-gray-400 font-bold">বকেয়া</span>
+                            <i class="fa-solid fa-coins text-amber-500 text-lg"></i>
+                        </div>
+                        <div class="text-2xl font-black text-amber-600 mt-1" id="adminTotalDue">৳0</div>
+                        <div class="text-[10px] text-gray-400">সকল শিক্ষার্থীর</div>
+                    </div>
+                    <div class="stat-card bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs text-gray-400 font-bold">মোট কালেকশন</span>
+                            <i class="fa-solid fa-money-bill-wave text-emerald-500 text-lg"></i>
+                        </div>
+                        <div class="text-2xl font-black text-emerald-600 mt-1" id="adminCollection">৳0</div>
+                        <div class="text-[10px] text-gray-400">চলতি মাসে</div>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                    <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                        <h4 class="text-xs font-bold text-gray-400 uppercase mb-2">মাসিক কালেকশন</h4>
+                        <canvas id="collectionChart" height="150"></canvas>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                        <h4 class="text-xs font-bold text-gray-400 uppercase mb-2">উপস্থিতি হার</h4>
+                        <canvas id="attendanceChart" height="150"></canvas>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="bg-white rounded-t-2xl border border-gray-100 border-b-0 shadow-sm overflow-hidden no-print">
+                    <div class="flex overflow-x-auto">
+                        <button onclick="switchTab('students')" id="tabStudents" class="tab-btn tab-active flex items-center gap-2"><i class="fa-solid fa-users"></i> শিক্ষার্থী</button>
+                        <button onclick="switchTab('attendance')" id="tabAttendance" class="tab-btn tab-inactive flex items-center gap-2"><i class="fa-solid fa-calendar-check"></i> উপস্থিতি</button>
+                        <button onclick="switchTab('payments')" id="tabPayments" class="tab-btn tab-inactive flex items-center gap-2"><i class="fa-solid fa-money-bill-wave"></i> পেমেন্ট</button>
+                        <button onclick="switchTab('marks')" id="tabMarks" class="tab-btn tab-inactive flex items-center gap-2"><i class="fa-solid fa-star"></i> মার্কস</button>
+                        <button onclick="switchTab('reports')" id="tabReports" class="tab-btn tab-inactive flex items-center gap-2"><i class="fa-solid fa-file-pdf"></i> রিপোর্ট</button>
+                    </div>
+                </div>
+
+                <!-- Tab Content -->
+                <div class="bg-white rounded-b-2xl border border-gray-100 shadow-sm p-4">
+
+                    <!-- Students -->
+                    <div id="tabContentStudents" class="space-y-4">
+                        <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+                            <div class="flex items-center gap-2 w-full sm:w-auto">
+                                <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
+                                <input type="text" id="adminSearchInput" placeholder="আইডি বা নাম দিয়ে খুঁজুন..." class="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                                <button onclick="searchStudent()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm transition"><i class="fa-solid fa-search"></i></button>
+                                <button onclick="clearSearch()" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-3 py-2 rounded-xl text-sm transition"><i class="fa-solid fa-times"></i></button>
+                            </div>
+                            <button onclick="openAddModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm px-4 py-2 rounded-xl transition w-full sm:w-auto flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-user-plus"></i> নতুন যোগ করুন
+                            </button>
+                        </div>
+                        <div id="adminStudentList" class="divide-y divide-gray-50"></div>
+                    </div>
+
+                    <!-- Attendance -->
+                    <div id="tabContentAttendance" class="hidden space-y-4">
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <label class="text-sm font-bold text-gray-700">তারিখ:</label>
+                            <input type="date" id="attendanceDate" class="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                            <button onclick="saveAttendance()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-xl text-sm transition"><i class="fa-solid fa-save mr-1"></i> সংরক্ষণ</button>
+                            <button onclick="shareAttendance()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-sm transition"><i class="fa-solid fa-share-nodes mr-1"></i> শেয়ার</button>
+                        </div>
+                        <div class="grid grid-cols-4 gap-2 text-center p-3 bg-gray-50 rounded-xl">
+                            <div><span class="text-xs text-gray-400">মোট ক্লাস</span><br><span class="font-bold" id="attTotalClasses">0</span></div>
+                            <div><span class="text-xs text-gray-400">উপস্থিত</span><br><span class="font-bold text-emerald-600" id="attPresentCount">0</span></div>
+                            <div><span class="text-xs text-gray-400">অনুপস্থিত</span><br><span class="font-bold text-red-600" id="attAbsentCount">0</span></div>
+                            <div><span class="text-xs text-gray-400">হার</span><br><span class="font-bold text-blue-600" id="attPercent">0%</span></div>
+                        </div>
+                        <div id="attendanceList" class="space-y-2"></div>
+                    </div>
+
+                    <!-- Payments -->
+                    <div id="tabContentPayments" class="hidden space-y-4">
+                        <div class="flex items-center justify-between flex-wrap gap-2">
+                            <h3 class="font-bold text-sm text-gray-700"><i class="fa-solid fa-money-bill-wave text-blue-500 mr-1"></i> বকয়া (Due) সমারি</h3>
+                            <div class="flex gap-2">
+                                <button onclick="sharePayments()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-sm transition"><i class="fa-solid fa-share-nodes mr-1"></i> শেয়ার</button>
+                                <button onclick="generatePaymentReport()" class="bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-xl text-sm transition"><i class="fa-solid fa-file-pdf mr-1"></i> PDF</button>
+                            </div>
+                        </div>
+                        <div id="paymentList" class="space-y-2"></div>
+                    </div>
+
+                    <!-- Marks -->
+                    <div id="tabContentMarks" class="hidden space-y-4">
+                        <div class="flex items-center justify-between flex-wrap gap-2">
+                            <h3 class="font-bold text-sm text-gray-700"><i class="fa-solid fa-star text-amber-500 mr-1"></i> মার্কস</h3>
+                            <div class="flex gap-2">
+                                <button onclick="openMarksModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-xl text-sm transition"><i class="fa-solid fa-plus mr-1"></i> নতুন যোগ</button>
+                                <button onclick="shareMarks()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-sm transition"><i class="fa-solid fa-share-nodes mr-1"></i> শেয়ার</button>
+                            </div>
+                        </div>
+                        <div id="marksList" class="space-y-2"></div>
+                    </div>
+
+                    <!-- Reports -->
+                    <div id="tabContentReports" class="hidden space-y-4">
+                        <h3 class="font-bold text-sm text-gray-700"><i class="fa-solid fa-file-pdf text-red-500 mr-1"></i> রিপোর্ট জেনারেট</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <button onclick="generateAttendanceReport()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition"><i class="fa-solid fa-calendar-check mr-2"></i> উপস্থিতি রিপোর্ট</button>
+                            <button onclick="generatePaymentReport()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition"><i class="fa-solid fa-money-bill-wave mr-2"></i> পেমেন্ট রিপোর্ট</button>
+                            <button onclick="generateMarksReport()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 rounded-xl transition"><i class="fa-solid fa-star mr-2"></i> মার্কস রিপোর্ট</button>
+                            <button onclick="generateFullReport()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-xl transition"><i class="fa-solid fa-file-pdf mr-2"></i> সম্পূর্ণ রিপোর্ট</button>
+                        </div>
+                    </div>
+
+                </div>
             </div>
         </section>
     </main>
 
-    <!-- ADMIN MODAL FOR ADDING/EDITING STUDENT -->
-    <div id="studentModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white w-full max-w-sm rounded-2xl shadow-xl overflow-hidden animate-scale-up">
-            <div class="bg-blue-600 text-white p-4 flex justify-between items-center">
-                <h3 class="font-bold text-sm" id="modalTitle">নতুন শিক্ষার্থী ডাটা ফরম</h3>
-                <button onclick="toggleAddModal(false)" class="text-white hover:text-gray-200"><i class="fa-solid fa-xmark text-lg"></i></button>
+    <!-- ===== MODALS ===== -->
+
+    <!-- Profile Modal -->
+    <div id="profileModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden animate-fade-in max-h-[90vh] overflow-y-auto">
+            <div class="bg-gradient-to-r from-indigo-600 to-blue-600 text-white p-4 flex justify-between items-center sticky top-0">
+                <h3 class="font-bold text-sm flex items-center gap-2"><i class="fa-regular fa-address-card"></i> প্রোফাইল</h3>
+                <button onclick="closeProfileModal()" class="text-white hover:text-gray-200"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
-            <div class="p-4 space-y-3 max-h-[70vh] overflow-y-auto">
-                <input type="hidden" id="editIndex">
+            <div class="p-5 space-y-3" id="profileContent"></div>
+        </div>
+    </div>
+
+    <!-- Student Modal -->
+    <div id="studentModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white w-full max-w-sm rounded-2xl shadow-xl overflow-hidden animate-fade-in max-h-[90vh] overflow-y-auto">
+            <div class="bg-blue-600 text-white p-4 flex justify-between items-center sticky top-0">
+                <h3 class="font-bold text-sm" id="modalTitle">নতুন শিক্ষার্থী</h3>
+                <button onclick="closeModal()" class="text-white hover:text-gray-200"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="p-4 space-y-3">
+                <input type="hidden" id="editIndex" value="-1" />
+                <div><label class="text-xs font-bold text-gray-500 block mb-1">স্টুডেন্ট আইডি *</label><input type="text" id="formId" placeholder="যেমন: S101" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" /></div>
+                <div><label class="text-xs font-bold text-gray-500 block mb-1">পাসওয়ার্ড</label><input type="text" id="formPassword" placeholder="ডিফল্ট: আইডি+123" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" /></div>
+                <div><label class="text-xs font-bold text-gray-500 block mb-1">ছাত্রের নাম *</label><input type="text" id="formName" placeholder="পূর্ণ নাম" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" /></div>
+                <div><label class="text-xs font-bold text-gray-500 block mb-1">ক্লাস *</label><input type="text" id="formClass" placeholder="যেমন: Class 9" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" /></div>
+                <div><label class="text-xs font-bold text-gray-500 block mb-1">ব্যাচ</label><input type="text" id="formBatch" placeholder="যেমন: A" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" /></div>
+                <div><label class="text-xs font-bold text-gray-500 block mb-1">রোল নম্বর *</label><input type="text" id="formRoll" placeholder="যেমন: 05" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" /></div>
+                <div><label class="text-xs font-bold text-gray-500 block mb-1">ফোন নম্বর</label><input type="text" id="formPhone" placeholder="যেমন: 017XXXXXXXX" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" /></div>
+                <div><label class="text-xs font-bold text-gray-500 block mb-1">অভিভাবকের নাম</label><input type="text" id="formGuardian" placeholder="অভিভাবকের নাম" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" /></div>
+                <div><label class="text-xs font-bold text-gray-500 block mb-1">অভিভাবকের ফোন</label><input type="text" id="formGuardianPhone" placeholder="অভিভাবকের ফোন" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" /></div>
+                <div><label class="text-xs font-bold text-gray-500 block mb-1">উপস্থিতি (দিন)</label><input type="number" id="formAttendance" placeholder="যেমন: 20" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" /></div>
+                <div><label class="text-xs font-bold text-gray-500 block mb-1">মোট ক্লাস</label><input type="number" id="formTotalClasses" placeholder="যেমন: 24" value="24" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" /></div>
+                <div><label class="text-xs font-bold text-gray-500 block mb-1">প্রাপ্ত নম্বর</label><input type="number" id="formMarks" placeholder="যেমন: 85" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" /></div>
+                <div><label class="text-xs font-bold text-gray-500 block mb-1">মাসিক ফি (৳)</label><input type="number" id="formFee" placeholder="যেমন: 2500" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" /></div>
+                <div><label class="text-xs font-bold text-gray-500 block mb-1">পরিশোধ (৳)</label><input type="number" id="formPaid" placeholder="যেমন: 2000" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" /></div>
+                <div><label class="text-xs font-bold text-gray-500 block mb-1">স্ট্যাটাস</label>
+                    <select id="formStatus" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                        <option value="active">সক্রিয়</option>
+                        <option value="inactive">নিষ্ক্রিয়</option>
+                    </select>
+                </div>
+                <button onclick="saveStudent()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl text-sm transition mt-2"><i class="fa-solid fa-save mr-1"></i> সংরক্ষণ করুন</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Marks Modal -->
+    <div id="marksModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white w-full max-w-sm rounded-2xl shadow-xl overflow-hidden animate-fade-in">
+            <div class="bg-amber-600 text-white p-4 flex justify-between items-center">
+                <h3 class="font-bold text-sm">নতুন মার্কস যোগ করুন</h3>
+                <button onclick="closeMarksModal()" class="text-white hover:text-gray-200"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="p-4 space-y-3">
+                <div><label class="text-xs font-bold text-gray-500 block mb-1">শিক্ষার্থী *</label>
+                    <select id="marksStudent" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm"></select>
+                </div>
+                <div><label class="text-xs font-bold text-gray-500 block mb-1">সাবজেক্ট</label><input type="text" id="marksSubject" placeholder="যেমন: English" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm" /></div>
+                <div><label class="text-xs font-bold text-gray-500 block mb-1">প্রাপ্ত নম্বর</label><input type="number" id="marksObtained" placeholder="যেমন: 42" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm" /></div>
+                <div><label class="text-xs font-bold text-gray-500 block mb-1">মোট নম্বর</label><input type="number" id="marksTotal" placeholder="যেমন: 100" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm" /></div>
+                <button onclick="saveMarks()" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 rounded-xl text-sm transition mt-2"><i class="fa-solid fa-save mr-1"></i> সংরক্ষণ করুন</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Share Modal -->
+    <div id="shareModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white w-full max-w-sm rounded-2xl shadow-xl overflow-hidden animate-fade-in">
+            <div class="bg-gradient-to-r from-indigo-600 to-blue-600 text-white p-4 flex justify-between items-center">
+                <h3 class="font-bold text-sm flex items-center gap-2"><i class="fa-solid fa-share-nodes"></i> শেয়ার করুন</h3>
+                <button onclick="closeShareModal()" class="text-white hover:text-gray-200"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="p-5 space-y-3">
+                <p class="text-sm text-gray-600 text-center">ড্যাশবোর্ডের তথ্য শেয়ার করুন</p>
+                <div class="flex gap-2 justify-center flex-wrap">
+                    <button onclick="shareWhatsApp()" class="bg-green-500 hover:bg-green-600 text-white p-3 rounded-xl transition"><i class="fa-brands fa-whatsapp text-xl"></i></button>
+                    <button onclick="shareFacebook()" class="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-xl transition"><i class="fa-brands fa-facebook text-xl"></i></button>
+                    <button onclick="copyShareLink()" class="bg-gray-600 hover:bg-gray-700 text-white p-3 rounded-xl transition"><i class="fa-solid fa-link text-xl"></i></button>
+                </div>
+                <div class="mt-2 p-3 bg-gray-50 rounded-xl text-xs text-gray-500 break-all" id="shareLink">https://nrs-academy.com</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Modal -->
+    <div id="paymentModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white w-full max-w-sm rounded-2xl shadow-xl overflow-hidden animate-fade-in">
+            <div class="bg-emerald-600 text-white p-4 flex justify-between items-center">
+                <h3 class="font-bold text-sm"><i class="fa-solid fa-money-bill-wave mr-2"></i>পেমেন্ট আপডেট</h3>
+                <button onclick="closePaymentModal()" class="text-white hover:text-gray-200"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="p-5 space-y-4" id="paymentModalContent"></div>
+        </div>
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- ======================== JAVASCRIPT ========================== -->
+    <!-- ============================================================ -->
+    <script>
+        // ===================== FIREBASE CONFIG =====================
+        // 🔥 আপনার Firebase Config এখানে বসান
+        const firebaseConfig = {
+            apiKey: "AIzaSyDummyKeyHere123456789", // Replace with your actual key
+            authDomain: "your-project.firebaseapp.com",
+            databaseURL: "https://your-project-default-rtdb.firebaseio.com",
+            projectId: "your-project",
+            storageBucket: "your-project.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef123456"
+        };
+
+        // Initialize Firebase
+        let firebaseInitialized = false;
+        try {
+            firebase.initializeApp(firebaseConfig);
+            firebaseInitialized = true;
+            document.getElementById('firebaseStatus').textContent = '☁️ Cloud Connected ✅';
+            document.getElementById('firebaseStatus').className = 'text-xs text-green-600';
+            document.getElementById('syncStatus').className = 'sync-status sync-online';
+            console.log('🔥 Firebase initialized successfully');
+        } catch (e) {
+            console.warn('⚠️ Firebase init failed, using localStorage only:', e.message);
+            document.getElementById('firebaseStatus').textContent = '⚠️ Offline Mode (local)';
+            document.getElementById('firebaseStatus').className = 'text-xs text-amber-600';
+            document.getElementById('syncStatus').className = 'sync-status sync-offline';
+        }
+
+        const db = firebaseInitialized ? firebase.database() : null;
+
+
+        // ===================== PWA =====================
+        let deferredPrompt;
+        let isPWAInstalled = false;
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            isPWAInstalled = true;
+            document.getElementById('pwaStatus').textContent = '📱 অ্যাপ মোডে চলছে';
+        }
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            if (!isPWAInstalled) document.getElementById('installBanner').style.display = 'block';
+        });
+        window.addEventListener('appinstalled', () => {
+            isPWAInstalled = true;
+            document.getElementById('installBanner').style.display = 'none';
+            document.getElementById('pwaStatus').textContent = '✅ অ্যাপ ইনস্টল করা হয়েছে!';
+            showNotification('অভিনন্দন!', 'NRS Academy অ্যাপ সফলভাবে ইনস্টল হয়েছে।');
+        });
+
+        function installPWA() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        isPWAInstalled = true;
+                        document.getElementById('installBanner').style.display = 'none';
+                        document.getElementById('pwaStatus').textContent = '✅ অ্যাপ ইনস্টল করা হয়েছে!';
+                    }
+                    deferredPrompt = null;
+                });
+            }
+        }
+
+        function closeInstallBanner() { document.getElementById('installBanner').style.display = 'none'; }
+
+        function showNotification(title, body) {
+            const toast = document.getElementById('notificationToast');
+            document.getElementById('notifTitle').textContent = title;
+            document.getElementById('notifBody').textContent = body;
+            document.getElementById('notifTime').textContent = new Date().toLocaleTimeString('bn-BD');
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 8000);
+        }
+
+        function closeNotification() { document.getElementById('notificationToast').style.display = 'none'; }
+
+
+        // ===================== DATA =====================
+        let students = [];
+        let attendanceRecords = [];
+        let marksRecords = [];
+        let adminPassword = 'admin123';
+        let currentUser = null;
+        let currentTab = 'students';
+        let collectionChart = null;
+        let attendanceChart = null;
+        let isSyncing = false;
+
+        function loadData() {
+            const storedStudents = localStorage.getItem('nrsStudents');
+            if (storedStudents) {
+                try { students = JSON.parse(storedStudents); } catch (e) { students = []; }
+            } else {
+                students = [{
+                    id: 'S101',
+                    password: 'S101123',
+                    name: 'মোঃ আব্দুল্লাহ',
+                    class: 'Class 9',
+                    batch: 'A',
+                    roll: '05',
+                    phone: '017XXXXXXXX',
+                    guardian: 'আব্দুল করিম',
+                    guardianPhone: '018XXXXXXXX',
+                    attendance: 22,
+                    totalClasses: 24,
+                    marks: 87,
+                    fee: 2500,
+                    paid: 2500,
+                    status: 'active',
+                    admissionDate: '2026-01-15'
+                }, {
+                    id: 'S102',
+                    password: 'S102123',
+                    name: 'সাবরিনা আক্তার',
+                    class: 'Class 8',
+                    batch: 'B',
+                    roll: '12',
+                    phone: '018XXXXXXXX',
+                    guardian: 'মোঃ আলী',
+                    guardianPhone: '019XXXXXXXX',
+                    attendance: 18,
+                    totalClasses: 24,
+                    marks: 72,
+                    fee: 2000,
+                    paid: 1000,
+                    status: 'active',
+                    admissionDate: '2026-02-10'
+                }, {
+                    id: 'S103',
+                    password: 'S103123',
+                    name: 'আরিফ হোসেন',
+                    class: 'Class 10',
+                    batch: 'A',
+                    roll: '03',
+                    phone: '019XXXXXXXX',
+                    guardian: 'মোঃ হোসেন',
+                    guardianPhone: '017XXXXXXXX',
+                    attendance: 25,
+                    totalClasses: 24,
+                    marks: 94,
+                    fee: 3000,
+                    paid: 2000,
+                    status: 'active',
+                    admissionDate: '2025-11-20'
+                }];
+                saveData();
+            }
+
+            const storedAttendance = localStorage.getItem('nrsAttendance');
+            if (storedAttendance) {
+                try { attendanceRecords = JSON.parse(storedAttendance); } catch (e) { attendanceRecords = []; }
+            }
+
+            const storedMarks = localStorage.getItem('nrsMarks');
+            if (storedMarks) {
+                try { marksRecords = JSON.parse(storedMarks); } catch (e) { marksRecords = []; }
+            }
+
+            const storedPass = localStorage.getItem('nrsAdminPassword');
+            if (storedPass) { adminPassword = storedPass; }
+        }
+
+        function saveData() {
+            // Always save locally
+            localStorage.setItem('nrsStudents', JSON.stringify(students));
+            localStorage.setItem('nrsAttendance', JSON.stringify(attendanceRecords));
+            localStorage.setItem('nrsMarks', JSON.stringify(marksRecords));
+            localStorage.setItem('nrsAdminPassword', adminPassword);
+
+            // Save to Firebase if available
+            if (firebaseInitialized && db) {
+                try {
+                    db.ref('students/').set(students);
+                    db.ref('attendance/').set(attendanceRecords);
+                    db.ref('marks/').set(marksRecords);
+                    console.log('☁️ Data synced to Firebase');
+                } catch (e) {
+                    console.warn('⚠️ Firebase sync failed:', e);
+                }
+            }
+        }
+
+        // ===================== SYNC FROM FIREBASE =====================
+        function syncData() {
+            if (isSyncing) return;
+            if (!firebaseInitialized || !db) {
+                showNotification('⚠️ অফলাইন', 'Firebase সংযুক্ত নেই। localStorage ব্যবহার করা হচ্ছে।');
+                return;
+            }
+
+            isSyncing = true;
+            showNotification('🔄 সিঙ্ক', 'ডেটা সিঙ্ক করা হচ্ছে...');
+
+            try {
+                // Load students from Firebase
+                db.ref('students/').once('value', (snapshot) => {
+                    const data = snapshot.val();
+                    if (data) {
+                        students = Object.values(data);
+                        saveData();
+                        renderAll();
+                        showNotification('✅ সিঙ্ক সম্পন্ন', 'সকল ডেটা ক্লাউড থেকে লোড করা হয়েছে!');
+                    } else {
+                        // If no data in Firebase, upload local data
+                        saveData();
+                        showNotification('☁️ আপলোড', 'লোকাল ডেটা ক্লাউডে আপলোড করা হয়েছে!');
+                    }
+                    isSyncing = false;
+                });
+
+                // Also sync attendance and marks
+                db.ref('attendance/').once('value', (snapshot) => {
+                    const data = snapshot.val();
+                    if (data) {
+                        attendanceRecords = Object.values(data);
+                        saveData();
+                    }
+                });
+
+                db.ref('marks/').once('value', (snapshot) => {
+                    const data = snapshot.val();
+                    if (data) {
+                        marksRecords = Object.values(data);
+                        saveData();
+                    }
+                });
+
+            } catch (e) {
+                showNotification('❌ সিঙ্ক ব্যর্থ', 'ইন্টারনেট সংযোগ চেক করুন!');
+                isSyncing = false;
+            }
+        }
+
+        // ===================== REAL-TIME LISTENERS =====================
+        function listenToFirebase() {
+            if (!firebaseInitialized || !db) return;
+
+            // Listen for changes in students
+            db.ref('students/').on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    students = Object.values(data);
+                    saveData();
+                    if (currentUser === 'admin') {
+                        renderStudentList(students);
+                        renderAdminDashboard();
+                        initCharts();
+                    }
+                }
+            });
+
+            // Listen for changes in attendance
+            db.ref('attendance/').on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    attendanceRecords = Object.values(data);
+                    saveData();
+                    if (currentUser === 'admin' && currentTab === 'attendance') {
+                        renderAttendance();
+                    }
+                }
+            });
+
+            // Listen for changes in marks
+            db.ref('marks/').on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    marksRecords = Object.values(data);
+                    saveData();
+                    if (currentUser === 'admin' && currentTab === 'marks') {
+                        renderMarks();
+                    }
+                }
+            });
+        }
+
+
+        // ===================== RENDER ALL =====================
+        function renderAll() {
+            if (currentUser === 'admin') {
+                renderAdminDashboard();
+                renderStudentList(students);
+                if (currentTab === 'attendance') renderAttendance();
+                if (currentTab === 'payments') renderPayments();
+                if (currentTab === 'marks') renderMarks();
+                initCharts();
+            } else if (currentUser === 'student') {
+                const id = document.getElementById('stuId').textContent.replace('ID: ', '');
+                const student = students.find(s => s.id === id);
+                if (student) showStudentDashboard(student);
+            }
+        }
+
+
+        // ===================== LOGIN =====================
+        function studentLogin() {
+            const id = document.getElementById('studentIdInput').value.trim().toUpperCase();
+            const pass = document.getElementById('studentPasswordInput').value.trim();
+            if (!id) { alert('দয়া করে স্টুডেন্ট আইডি দিন'); return; }
+            if (!pass) { alert('দয়া করে পাসওয়ার্ড দিন'); return; }
+
+            const student = students.find(s => s.id === id && s.password === pass);
+            if (!student) { alert('ভুল আইডি বা পাসওয়ার্ড!'); return; }
+
+            currentUser = 'student';
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('studentDashboard').style.display = 'block';
+            document.getElementById('adminDashboard').style.display = 'none';
+            document.getElementById('shareBtn').classList.remove('hidden');
+            document.getElementById('userTypeBadge').textContent = '👨‍🎓 ছাত্র';
+            document.getElementById('userTypeBadge').classList.remove('hidden');
+
+            showStudentDashboard(student);
+        }
+
+        function showPasswordHelp() {
+            alert('📌 পাসওয়ার্ড রিসেট:\n\nআপনার আইডি দিয়ে শিক্ষকের সাথে যোগাযোগ করুন।\nঅথবা ডিফল্ট পাসওয়ার্ড: আপনার আইডি + 123\n\nযেমন: S101 হলে পাসওয়ার্ড: S101123');
+        }
+
+        function adminLogin() {
+            const pass = document.getElementById('adminPasswordInput').value.trim();
+            if (pass === adminPassword) {
+                currentUser = 'admin';
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('studentDashboard').style.display = 'none';
+                document.getElementById('adminDashboard').style.display = 'block';
+                document.getElementById('shareBtn').classList.remove('hidden');
+                document.getElementById('userTypeBadge').textContent = '👨‍🏫 শিক্ষক';
+                document.getElementById('userTypeBadge').classList.remove('hidden');
+
+                renderAll();
+                switchTab('students');
+                showNotification('স্বাগতম শিক্ষক!', 'আপনার ড্যাশবোর্ড প্রস্তুত।');
+            } else {
+                alert('ভুল পাসওয়ার্ড। সঠিক পাসওয়ার্ড দিন।');
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            document.getElementById('loginScreen').style.display = 'block';
+            document.getElementById('studentDashboard').style.display = 'none';
+            document.getElementById('adminDashboard').style.display = 'none';
+            document.getElementById('shareBtn').classList.add('hidden');
+            document.getElementById('userTypeBadge').classList.add('hidden');
+            document.getElementById('studentIdInput').value = '';
+            document.getElementById('studentPasswordInput').value = '';
+            document.getElementById('adminPasswordInput').value = '';
+        }
+
+        function togglePasswordVisibility() {
+            const input = document.getElementById('adminPasswordInput');
+            const icon = document.getElementById('passwordEyeIcon');
+            if (input.type === 'password') { input.type = 'text';
+                icon.className = 'fa-solid fa-eye-slash'; } else { input.type = 'password';
+                icon.className = 'fa-solid fa-eye'; }
+        }
+
+
+        // ===================== STUDENT DASHBOARD =====================
+        function showStudentDashboard(student) {
+            document.getElementById('stuPhoto').src =
+                `https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=4f46e5&color=fff&size=64`;
+            document.getElementById('stuName').textContent = student.name;
+            document.getElementById('stuId').textContent = 'ID: ' + student.id;
+            document.getElementById('stuClass').textContent = student.class;
+            document.getElementById('stuBatch').textContent = 'Batch: ' + (student.batch || 'A');
+            document.getElementById('stuRoll').textContent = student.roll;
+            document.getElementById('stuAdmissionDate').textContent = 'ভর্তি: ' + (student.admissionDate || '---');
+
+            const total = student.totalClasses || 24;
+            const present = student.attendance || 0;
+            const percent = total > 0 ? ((present / total) * 100).toFixed(1) : 0;
+            document.getElementById('stuAttendance').textContent = present + ' দিন';
+            document.getElementById('stuAttendancePercent').textContent = percent + '%';
+            document.getElementById('stuMarks').textContent = (student.marks || 0) + ' / 100';
+            document.getElementById('stuDate').textContent = new Date().toLocaleDateString('bn-BD');
+
+            const fee = student.fee || 0;
+            const paid = student.paid || 0;
+            const due = fee - paid;
+            document.getElementById('stuFee').textContent = '৳ ' + fee.toLocaleString();
+            document.getElementById('stuPaid').textContent = '৳ ' + paid.toLocaleString();
+            document.getElementById('stuDue').textContent = '৳ ' + due.toLocaleString();
+
+            const statusEl = document.getElementById('stuPayStatus');
+            if (due <= 0) {
+                statusEl.textContent = 'পরিশোধিত ✅';
+                statusEl.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700';
+            } else if (paid > 0) {
+                statusEl.textContent = 'আংশিক ⏳';
+                statusEl.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700';
+            } else {
+                statusEl.textContent = 'বাকি ❌';
+                statusEl.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700';
+            }
+
+            document.getElementById('stuGuardian').textContent = student.guardian || '---';
+            document.getElementById('stuGuardianPhone').textContent = student.guardianPhone || '---';
+        }
+
+        function viewStudentProfile() {
+            const id = document.getElementById('stuId').textContent.replace('ID: ', '');
+            const student = students.find(s => s.id === id);
+            if (!student) return;
+            showProfileModal(student);
+        }
+
+
+        // ===================== PROFILE MODAL =====================
+        function showProfileModal(student) {
+            const content = document.getElementById('profileContent');
+            const total = student.totalClasses || 24;
+            const present = student.attendance || 0;
+            const percent = total > 0 ? ((present / total) * 100).toFixed(1) : 0;
+            const fee = student.fee || 0;
+            const paid = student.paid || 0;
+            const due = fee - paid;
+
+            content.innerHTML = `
+                <div class="flex items-center gap-4 border-b pb-4">
+                    <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(student.name)}&background=4f46e5&color=fff&size=64" class="w-20 h-20 rounded-full border-2 border-indigo-200">
+                    <div>
+                        <h3 class="font-bold text-lg">${student.name}</h3>
+                        <p class="text-sm text-gray-500">ID: ${student.id}</p>
+                        <p class="text-sm text-gray-500">${student.class} | Batch: ${student.batch || 'A'} | Roll: ${student.roll}</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3 text-sm">
+                    <div><span class="text-gray-500">ফোন</span><br><span class="font-semibold">${student.phone || '---'}</span></div>
+                    <div><span class="text-gray-500">স্ট্যাটাস</span><br><span class="status-badge ${student.status === 'active' ? 'status-active' : 'status-inactive'}">${student.status === 'active' ? 'সক্রিয়' : 'নিষ্ক্রিয়'}</span></div>
+                    <div><span class="text-gray-500">ভর্তির তারিখ</span><br><span class="font-semibold">${student.admissionDate || '---'}</span></div>
+                    <div><span class="text-gray-500">উপস্থিতি</span><br><span class="font-semibold">${present}/${total} (${percent}%)</span></div>
+                    <div><span class="text-gray-500">মাসিক ফি</span><br><span class="font-semibold">৳ ${fee}</span></div>
+                    <div><span class="text-gray-500">পরিশোধ</span><br><span class="font-semibold text-emerald-600">৳ ${paid}</span></div>
+                    <div><span class="text-gray-500">বাকি</span><br><span class="font-semibold text-red-600">৳ ${due}</span></div>
+                    <div><span class="text-gray-500">মার্কস</span><br><span class="font-semibold">${student.marks || 0}/100</span></div>
+                </div>
+                <div class="border-t pt-3 mt-2">
+                    <p class="text-xs text-gray-400">অভিভাবক: ${student.guardian || '---'} (${student.guardianPhone || '---'})</p>
+                </div>
+                <button onclick="generateStudentReceipt('${student.id}')" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-xl text-sm transition mt-2">
+                    <i class="fa-solid fa-file-pdf mr-1"></i> রসিদ ডাউনলোড (PDF)
+                </button>
+            `;
+            document.getElementById('profileModal').classList.remove('hidden');
+        }
+
+        function closeProfileModal() { document.getElementById('profileModal').classList.add('hidden'); }
+
+
+        // ===================== ADMIN DASHBOARD =====================
+        function renderAdminDashboard() {
+            const activeStudents = students.filter(s => s.status === 'active');
+            const total = activeStudents.length;
+            const today = new Date().toISOString().split('T')[0];
+            const todayAtt = attendanceRecords.find(a => a.date === today);
+            let present = 0;
+            if (todayAtt) {
+                activeStudents.forEach(s => { if (todayAtt.records[s.id] === 'present') present++; });
+            }
+            const totalDue = activeStudents.reduce((sum, s) => sum + ((s.fee || 0) - (s.paid || 0)), 0);
+            const totalCollection = activeStudents.reduce((sum, s) => sum + (s.paid || 0), 0);
+
+            document.getElementById('adminTotalStudents').textContent = total;
+            document.getElementById('adminPresent').textContent = present;
+            document.getElementById('adminTotalDue').textContent = '৳' + totalDue.toLocaleString();
+            document.getElementById('adminCollection').textContent = '৳' + totalCollection.toLocaleString();
+            document.getElementById('adminPresentPercent').textContent = total > 0 ? ((present / total) * 100).toFixed(1) + '%' :
+                '0%';
+        }
+
+
+        // ===================== CHARTS =====================
+        function initCharts() {
+            const months = ['মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট'];
+            const collections = students.map(s => s.paid || 0);
+            // For demo, using some default values
+            const chartData = [12000, 15000, 18000, 22000, 25000, 28000];
+
+            const ctx1 = document.getElementById('collectionChart').getContext('2d');
+            if (collectionChart) collectionChart.destroy();
+            collectionChart = new Chart(ctx1, {
+                type: 'bar',
+                data: { labels: months, datasets: [{ label: 'কালেকশন (৳)', data: chartData, backgroundColor: [
+                            '#4f46e5', '#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe', '#4f46e5'
+                        ], borderRadius: 5 }] },
+                options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+            });
+
+            const ctx2 = document.getElementById('attendanceChart').getContext('2d');
+            if (attendanceChart) attendanceChart.destroy();
+            const totalAtt = students.reduce((sum, s) => sum + (s.attendance || 0), 0);
+            const totalAbs = students.reduce((sum, s) => sum + ((s.totalClasses || 24) - (s.attendance || 0)), 0);
+            attendanceChart = new Chart(ctx2, {
+                type: 'doughnut',
+                data: { labels: ['উপস্থিত', 'অনুপস্থিত'], datasets: [{ data: [totalAtt || 10, totalAbs || 10],
+                        backgroundColor: ['#10b981', '#ef4444'] }] },
+                options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+            });
+        }
+
+
+        // ===================== TAB SWITCHING =====================
+        function switchTab(tab) {
+            currentTab = tab;
+            const tabs = ['students', 'attendance', 'payments', 'marks', 'reports'];
+            tabs.forEach(t => {
+                const btn = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
+                const content = document.getElementById('tabContent' + t.charAt(0).toUpperCase() + t.slice(1));
+                if (t === tab) { btn.className = 'tab-btn tab-active flex items-center gap-2';
+                    content.classList.remove('hidden'); } else { btn.className = 'tab-btn tab-inactive flex items-center gap-2';
+                    content.classList.add('hidden'); }
+            });
+            if (tab === 'students') renderStudentList(students);
+            else if (tab === 'attendance') renderAttendance();
+            else if (tab === 'payments') renderPayments();
+            else if (tab === 'marks') renderMarks();
+        }
+
+
+        // ===================== STUDENT LIST =====================
+        function renderStudentList(list) {
+            const container = document.getElementById('adminStudentList');
+            if (list.length === 0) {
+                container.innerHTML =
+                    `<div class="p-6 text-center text-gray-400 text-sm"><i class="fa-solid fa-users-slash text-2xl block mb-2"></i>কোনো শিক্ষার্থী পাওয়া যায়নি।</div>`;
+                return;
+            }
+
+            container.innerHTML = list.map((s, index) => {
+                const due = (s.fee || 0) - (s.paid || 0);
+                const dueStatus = due <= 0 ? 'status-paid' : 'status-due';
+                const dueText = due <= 0 ? '✅ পরিশোধিত' : `বাকি ৳${due}`;
+                return `
+                <div class="student-card p-3 flex items-center justify-between hover:bg-gray-50 transition border-b border-gray-50">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-semibold text-sm text-gray-800">${s.name}</span>
+                            <span class="text-xs text-gray-500">${s.class}</span>
+                            <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">${s.id}</span>
+                            <span class="status-badge ${dueStatus} text-[10px]">${dueText}</span>
+                        </div>
+                        <div class="flex items-center gap-3 text-xs mt-0.5 flex-wrap">
+                            <span class="text-gray-400">রোল: ${s.roll}</span>
+                            <span class="text-gray-400"><i class="fa-solid fa-phone text-gray-300 mr-1"></i>${s.phone || 'N/A'}</span>
+                            <span class="text-gray-400">উপস্থিতি: ${s.attendance || 0} দিন</span>
+                        </div>
+                    </div>
+                    <div class="flex gap-1 flex-shrink-0">
+                        <button onclick="showProfileModal(students[${index}])" class="text-indigo-500 hover:text-indigo-700 text-sm p-1.5 hover:bg-indigo-50 rounded-lg transition" title="ভিউ"><i class="fa-regular fa-eye"></i></button>
+                        <button onclick="editStudent(${index})" class="text-blue-500 hover:text-blue-700 text-sm p-1.5 hover:bg-blue-50 rounded-lg transition" title="এডিট"><i class="fa-regular fa-pen-to-square"></i></button>
+                        <button onclick="deleteStudent(${index})" class="text-red-400 hover:text-red-600 text-sm p-1.5 hover:bg-red-50 rounded-lg transition" title="ডিলিট"><i class="fa-regular fa-trash-can"></i></button>
+                    </div>
+                </div>
+            `}).join('');
+        }
+
+
+        // ===================== SEARCH =====================
+        function searchStudent() {
+            const query = document.getElementById('adminSearchInput').value.trim().toLowerCase();
+            if (!query) { renderStudentList(students); return; }
+            const filtered = students.filter(s => s.id.toLowerCase().includes(query) || s.name.toLowerCase().includes(query) || s
+                .class.toLowerCase().includes(query));
+            renderStudentList(filtered);
+        }
+
+        function clearSearch() { document.getElementById('adminSearchInput').value = '';
+            renderStudentList(students); }
+
+
+        // ===================== ATTENDANCE =====================
+        function renderAttendance() {
+            const container = document.getElementById('attendanceList');
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('attendanceDate').value = today;
+
+            let dayAttendance = attendanceRecords.find(a => a.date === today);
+            if (!dayAttendance) {
+                dayAttendance = { date: today, records: {} };
+                students.forEach(s => { dayAttendance.records[s.id] = 'present'; });
+                attendanceRecords.push(dayAttendance);
+                saveData();
+            }
+
+            const activeStudents = students.filter(s => s.status === 'active');
+            let presentCount = 0,
+                absentCount = 0,
+                lateCount = 0;
+            activeStudents.forEach(s => {
+                const status = dayAttendance.records[s.id] || 'present';
+                if (status === 'present') presentCount++;
+                else if (status === 'absent') absentCount++;
+                else if (status === 'late') lateCount++;
+            });
+            const total = presentCount + absentCount + lateCount;
+            const percent = total > 0 ? ((presentCount / total) * 100).toFixed(1) : 0;
+
+            document.getElementById('attTotalClasses').textContent = total;
+            document.getElementById('attPresentCount').textContent = presentCount;
+            document.getElementById('attAbsentCount').textContent = absentCount;
+            document.getElementById('attPercent').textContent = percent + '%';
+
+            container.innerHTML = activeStudents.map(s => {
+                const status = dayAttendance.records[s.id] || 'present';
+                const isPresent = status === 'present';
+                const isAbsent = status === 'absent';
+                const isLate = status === 'late';
+                return `
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition">
+                        <div>
+                            <span class="font-semibold text-sm text-gray-800">${s.name}</span>
+                            <span class="text-xs text-gray-400 ml-2">${s.id}</span>
+                            <span class="text-xs text-gray-400 ml-2">(${s.attendance || 0}/${s.totalClasses || 24})</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="setAttendance('${s.id}', 'present')" class="attendance-btn px-3 py-1 rounded-lg text-xs font-bold ${isPresent ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-600 hover:bg-green-100'}">উপস্থিত</button>
+                            <button onclick="setAttendance('${s.id}', 'absent')" class="attendance-btn px-3 py-1 rounded-lg text-xs font-bold ${isAbsent ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-600 hover:bg-red-100'}">অনুপস্থিত</button>
+                            <button onclick="setAttendance('${s.id}', 'late')" class="attendance-btn px-3 py-1 rounded-lg text-xs font-bold ${isLate ? 'bg-amber-500 text-white' : 'bg-gray-200 text-gray-600 hover:bg-amber-100'}">দেরি</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            window._todayAttendance = dayAttendance;
+        }
+
+        function setAttendance(studentId, status) {
+            const date = document.getElementById('attendanceDate').value;
+            let dayAttendance = attendanceRecords.find(a => a.date === date);
+            if (!dayAttendance) {
+                dayAttendance = { date: date, records: {} };
+                students.forEach(s => { dayAttendance.records[s.id] = 'present'; });
+                attendanceRecords.push(dayAttendance);
+            }
+
+            const oldStatus = dayAttendance.records[studentId] || 'present';
+            dayAttendance.records[studentId] = status;
+            saveData();
+
+            const student = students.find(s => s.id === studentId);
+            if (student) {
+                if (oldStatus === 'present' && status !== 'present') {
+                    student.attendance = Math.max(0, (student.attendance || 0) - 1);
+                } else if (oldStatus !== 'present' && status === 'present') {
+                    student.attendance = (student.attendance || 0) + 1;
+                }
+                if (!student.totalClasses) student.totalClasses = 24;
+                saveData();
+            }
+
+            renderAttendance();
+            renderAdminDashboard();
+            initCharts();
+
+            const statusMap = { 'present': 'উপস্থিত ✅', 'absent': 'অনুপস্থিত ❌', 'late': 'দেরি ⏰' };
+            showNotification('📋 উপস্থিতি আপডেট', `${student?.name || ''}: ${statusMap[status]}`);
+        }
+
+        function saveAttendance() {
+            const date = document.getElementById('attendanceDate').value;
+            if (!date) { alert('দয়া করে একটি তারিখ নির্বাচন করুন'); return; }
+
+            let dayAttendance = attendanceRecords.find(a => a.date === date);
+            if (!dayAttendance) {
+                dayAttendance = { date: date, records: {} };
+                students.forEach(s => { dayAttendance.records[s.id] = 'present'; });
+                attendanceRecords.push(dayAttendance);
+            }
+            saveData();
+            showNotification('✅ সংরক্ষিত', 'উপস্থিতি সংরক্ষণ করা হয়েছে!');
+            renderAttendance();
+            renderAdminDashboard();
+        }
+
+        function shareAttendance() {
+            const date = document.getElementById('attendanceDate').value || new Date().toISOString().split('T')[0];
+            const dayAttendance = attendanceRecords.find(a => a.date === date);
+            const statusMap = { 'present': '✅ উপস্থিত', 'absent': '❌ অনুপস্থিত', 'late': '⏰ দেরি' };
+            let text = `🏫 NRS Academy - উপস্থিতি রিপোর্ট\n📅 তারিখ: ${date}\n\n`;
+            students.forEach(s => {
+                const status = dayAttendance?.records[s.id] || 'present';
+                text += `👤 ${s.name} (${s.id}): ${statusMap[status] || status}\n`;
+            });
+            navigator.clipboard.writeText(text).then(() => { showNotification('✅ কপি হয়েছে', 'উপস্থিতি রিপোর্ট কপি হয়েছে!'); });
+        }
+
+
+        // ===================== PAYMENTS =====================
+        function renderPayments() {
+            const container = document.getElementById('paymentList');
+            const activeStudents = students.filter(s => s.status === 'active');
+
+            if (activeStudents.length === 0) {
+                container.innerHTML =
+                    `<div class="p-6 text-center text-gray-400 text-sm">কোনো সক্রিয় শিক্ষার্থী নেই।</div>`;
+                return;
+            }
+
+            container.innerHTML = activeStudents.map(s => {
+                const fee = s.fee || 0;
+                const paid = s.paid || 0;
+                const due = fee - paid;
+                const status = due <= 0 ? 'paid' : (paid > 0 ? 'partial' : 'due');
+                const statusText = due <= 0 ? 'পরিশোধিত ✅' : (paid > 0 ? `আংশিক (বাকি ৳${due})` : `বাকি ৳${due} ❌`);
+                const statusClass = due <= 0 ? 'status-paid' : 'status-due';
+
+                return `
+                    <div class="student-card p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition flex items-center justify-between">
+                        <div>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="font-semibold text-sm text-gray-800">${s.name}</span>
+                                <span class="text-xs text-red-500 font-bold">Due ৳${due.toFixed(0)}</span>
+                                <span class="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded-full">${s.id}</span>
+                            </div>
+                            <div class="text-xs text-gray-400 mt-0.5">
+                                মাসিক ফি: ৳${fee} · পরিশোধ: ৳${paid} · বাকি: ৳${due}
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="status-badge ${statusClass} text-[10px]">${statusText}</span>
+                            <button onclick="openPaymentModal('${s.id}')" class="text-blue-500 hover:text-blue-700 text-sm p-1.5 hover:bg-blue-50 rounded-lg transition" title="পেমেন্ট আপডেট"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="generateStudentReceipt('${s.id}')" class="text-emerald-500 hover:text-emerald-700 text-sm p-1.5 hover:bg-emerald-50 rounded-lg transition" title="রসিদ"><i class="fa-solid fa-file-pdf"></i></button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openPaymentModal(studentId) {
+            const student = students.find(s => s.id === studentId);
+            if (!student) return;
+
+            const content = document.getElementById('paymentModalContent');
+            content.innerHTML = `
+                <div class="text-center">
+                    <p class="font-bold text-lg">${student.name}</p>
+                    <p class="text-sm text-gray-500">${student.id} · ${student.class}</p>
+                </div>
+                <div class="grid grid-cols-2 gap-3 text-sm bg-gray-50 p-3 rounded-xl">
+                    <div><span class="text-gray-500">মাসিক ফি</span><br><span class="font-bold">৳ ${student.fee || 0}</span></div>
+                    <div><span class="text-gray-500">পরিশোধ</span><br><span class="font-bold text-emerald-600">৳ ${student.paid || 0}</span></div>
+                    <div class="col-span-2"><span class="text-gray-500">বাকি</span><br><span class="font-bold text-red-600">৳ ${(student.fee || 0) - (student.paid || 0)}</span></div>
+                </div>
                 <div>
-                    <label class="text-xs font-bold text-gray-500 block mb-1">স্টুডেন্ট আইডি (অবশ্যই ইউনিক)</label>
+                    <label class="text-xs font-bold text-gray-500 block mb-1">পরিশোধের পরিমাণ (৳)</label>
+                    <input type="number" id="paymentAmount" placeholder="যেমন: 500" class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                </div>
+                <button onclick="updatePayment('${student.id}')" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-sm transition">
+                    <i class="fa-solid fa-save mr-1"></i> পেমেন্ট আপডেট করুন
+                </button>
+            `;
+            document.getElementById('paymentModal').classList.remove('hidden');
+        }
+
+        function closePaymentModal() { document.getElementById('paymentModal').classList.add('hidden'); }
+
+        function updatePayment(studentId) {
+            const student = students.find(s => s.id === studentId);
+            if (!student) return;
+
+            const amount = parseFloat(document.getElementById('paymentAmount').value);
+            if (!amount || amount <= 0) { alert('সঠিক পরিমাণ দিন'); return; }
+
+            const fee = student.fee || 0;
+            const currentPaid = student.paid || 0;
+            const newPaid = Math.min(currentPaid + amount, fee);
+            student.paid = newPaid;
+
+            saveData();
+            closePaymentModal();
+            renderPayments();
+            renderAdminDashboard();
+            initCharts();
+            showNotification('✅ পেমেন্ট আপডেট', `${student.name}: ৳${amount} পরিশোধ করা হয়েছে।`);
+        }
+
+        function sharePayments() {
+            let text = `🏫 NRS Academy - বকয়া (Due) সমারি\n📅 তারিখ: ${new Date().toLocaleDateString('bn-BD')}\n\n`;
+            students.forEach(s => {
+                const fee = s.fee || 0;
+                const paid = s.paid || 0;
+                const due = fee - paid;
+                text += `👤 ${s.name} (${s.id})\n   Due: ৳${due.toFixed(0)} | Expected: ৳${fee} | Paid: ৳${paid}\n\n`;
+            });
+            navigator.clipboard.writeText(text).then(() => { showNotification('✅ কপি হয়েছে', 'পেমেন্ট রিপোর্ট কপি হয়েছে!'); });
+        }
+
+
+        // ===================== MARKS =====================
+        function renderMarks() {
+            const container = document.getElementById('marksList');
+            if (marksRecords.length === 0) {
+                container.innerHTML =
+                    `<div class="p-6 text-center text-gray-400 text-sm">কোনো মার্কস যোগ করা হয়নি।</div>`;
+                return;
+            }
+            container.innerHTML = marksRecords.map((m, index) => {
+                const student = students.find(s => s.id === m.studentId);
+                return `
+                    <div class="student-card p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition flex items-center justify-between">
+                        <div>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="font-semibold text-sm text-gray-800">${student ? student.name : m.studentId}</span>
+                                <span class="text-xs text-gray-500">${m.subject || 'English'}</span>
+                            </div>
+                            <div class="text-xs text-gray-400 mt-0.5">${m.obtained}/${m.total} · ${m.date || '2026-09-03'}</div>
+                        </div>
+                        <div class="flex gap-1">
+                            <button onclick="shareMark(${index})" class="text-emerald-500 hover:text-emerald-700 text-sm p-1.5 hover:bg-emerald-50 rounded-lg transition" title="শেয়ার"><i class="fa-solid fa-share-nodes"></i></button>
+                            <button onclick="deleteMark(${index})" class="text-red-400 hover:text-red-600 text-sm p-1.5 hover:bg-red-50 rounded-lg transition" title="ডিলিট"><i class="fa-regular fa-trash-can"></i></button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openMarksModal() {
+            const select = document.getElementById('marksStudent');
+            select.innerHTML = students.map(s => `<option value="${s.id}">${s.name} (${s.id})</option>`).join('');
+            document.getElementById('marksSubject').value = '';
+            document.getElementById('marksObtained').value = '';
+            document.getElementById('marksTotal').value = '100';
+            document.getElementById('marksModal').classList.remove('hidden');
+        }
+
+        function closeMarksModal() { document.getElementById('marksModal').classList.add('hidden'); }
+
+        function saveMarks() {
+            const studentId = document.getElementById('marksStudent').value;
+            const subject = document.getElementById('marksSubject').value.trim() || 'English';
+            const obtained = parseInt(document.getElementById('marksObtained').value) || 0;
+            const total = parseInt(document.getElementById('marksTotal').value) || 100;
+            if (!studentId) { alert('শিক্ষার্থী নির্বাচন করুন'); return; }
+
+            const student = students.find(s => s.id === studentId);
+            marksRecords.push({ studentId, subject, obtained, total, date: new Date().toISOString().split('T')[0] });
+
+            if (student) {
+                const avg = marksRecords.filter(m => m.studentId === studentId).reduce((sum, m) => sum + (m.obtained / m.total *
+                    100), 0);
+                const count = marksRecords.filter(m => m.studentId === studentId).length;
+                student.marks = Math.round(avg / count);
+                saveData();
+            }
+
+            saveData();
+            closeMarksModal();
+            renderMarks();
+            renderAdminDashboard();
+            if (student) showNotification('📊 নতুন মার্কস!', `${student.name}: ${subject}-তে ${obtained}/${total} পেয়েছেন।`);
+        }
+
+        function shareMark(index) {
+            const m = marksRecords[index];
+            const student = students.find(s => s.id === m.studentId);
+            const text =
+                `📊 NRS Academy - মার্কস রিপোর্ট\n\n👤 ${student ? student.name : m.studentId}\n📚 সাবজেক্ট: ${m.subject}\n🏆 প্রাপ্ত: ${m.obtained}/${m.total}\n📅 তারিখ: ${m.date || '2026-09-03'}`;
+            navigator.clipboard.writeText(text).then(() => { showNotification('✅ কপি হয়েছে', 'মার্কস শেয়ার করা হয়েছে!'); });
+        }
+
+        function deleteMark(index) {
+            if (!confirm('এই মার্কস ডিলিট করতে চান?')) return;
+            marksRecords.splice(index, 1);
+            saveData();
+            renderMarks();
+        }
+
+        function shareMarks() {
+            let text = `📊 NRS Academy - মার্কস সমারি\n📅 তারিখ: ${new Date().toLocaleDateString('bn-BD')}\n\n`;
+            marksRecords.forEach(m => {
+                const student = students.find(s => s.id === m.studentId);
+                text += `👤 ${student ? student.name : m.studentId}\n   ${m.subject}: ${m.obtained}/${m.total}\n\n`;
+            });
+            navigator.clipboard.writeText(text).then(() => { showNotification('✅ কপি হয়েছে', 'মার্কস রিপোর্ট কপি হয়েছে!'); });
+        }
+
+
+        // ===================== PDF RECEIPTS =====================
+        function generateStudentReceipt(studentId) {
+            const student = students.find(s => s.id === studentId);
+            if (!student) { alert('শিক্ষার্থী পাওয়া যায়নি!'); return; }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const fee = student.fee || 0;
+            const paid = student.paid || 0;
+            const due = fee - paid;
+            const today = new Date().toLocaleDateString('bn-BD');
+            const month = new Date().toLocaleString('bn-BD', { month: 'long', year: 'numeric' });
+
+            doc.setFillColor(30, 58, 95);
+            doc.rect(0, 0, 210, 40, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(20);
+            doc.text('NRS ACADEMY', 105, 20, { align: 'center' });
+            doc.setFontSize(10);
+            doc.text('Payment Receipt', 105, 30, { align: 'center' });
+
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(12);
+            let y = 55;
+            doc.text(`Student: ${student.name}`, 20, y);
+            y += 10;
+            doc.text(`ID: ${student.id}`, 20, y);
+            y += 10;
+            doc.text(`Class: ${student.class} (Batch: ${student.batch || 'A'})`, 20, y);
+            y += 10;
+            doc.text(`Month: ${month}`, 20, y);
+            y += 10;
+            doc.text(`Date: ${today}`, 20, y);
+            y += 15;
+            doc.line(20, y, 190, y);
+            y += 10;
+            doc.text(`Monthly Fee: ৳ ${fee.toFixed(2)}`, 20, y);
+            y += 10;
+            doc.text(`Paid Amount: ৳ ${paid.toFixed(2)}`, 20, y);
+            y += 10;
+            doc.text(`Due Amount: ৳ ${due.toFixed(2)}`, 20, y);
+            y += 15;
+            doc.line(20, y, 190, y);
+            y += 10;
+            doc.setFontSize(10);
+            doc.text(`Payment Status: ${due <= 0 ? '✅ Fully Paid' : (paid > 0 ? '⏳ Partial' : '❌ Due')}`, 20, y);
+            y += 10;
+            doc.text(`Guardian: ${student.guardian || 'N/A'} (${student.guardianPhone || 'N/A'})`, 20, y);
+            y += 10;
+            doc.setFontSize(8);
+            doc.setTextColor(128, 128, 128);
+            doc.text('Thank you for choosing NRS Academy', 105, 280, { align: 'center' });
+            doc.text(`Generated on: ${new Date().toLocaleString()}`, 105, 288, { align: 'center' });
+
+            doc.save(`receipt_${student.id}_${today.replace(/\//g, '-')}.pdf`);
+            showNotification('📄 PDF তৈরি', `${student.name}-এর রসিদ ডাউনলোড হয়েছে!`);
+        }
+
+        function generatePaymentReport() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.setFillColor(30, 58, 95);
+            doc.rect(0, 0, 210, 30, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(18);
+            doc.text('NRS ACADEMY - Payment Report', 105, 20, { align: 'center' });
+
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(10);
+            let y = 45;
+            doc.setFillColor(240, 240, 240);
+            doc.rect(15, y - 5, 180, 10, 'F');
+            doc.text('ID', 20, y);
+            doc.text('Name', 45, y);
+            doc.text('Class', 85, y);
+            doc.text('Fee', 115, y);
+            doc.text('Paid', 135, y);
+            doc.text('Due', 155, y);
+            doc.text('Status', 175, y);
+            y += 12;
+
+            students.forEach(s => {
+                const fee = s.fee || 0;
+                const paid = s.paid || 0;
+                const due = fee - paid;
+                const status = due <= 0 ? 'Paid' : (paid > 0 ? 'Partial' : 'Due');
+                if (y > 270) { doc.addPage();
+                    y = 20; }
+                doc.text(s.id, 20, y);
+                doc.text(s.name.substring(0, 15), 45, y);
+                doc.text(s.class.substring(0, 10), 85, y);
+                doc.text(`৳${fee}`, 115, y);
+                doc.text(`৳${paid}`, 135, y);
+                doc.text(`৳${due}`, 155, y);
+                doc.text(status, 175, y);
+                y += 8;
+            });
+
+            y += 5;
+            const totalDue = students.reduce((sum, s) => sum + ((s.fee || 0) - (s.paid || 0)), 0);
+            doc.line(15, y - 2, 195, y - 2);
+            doc.text(`Total Due: ৳${totalDue.toFixed(2)}`, 20, y + 5);
+            doc.text(`Generated: ${new Date().toLocaleString()}`, 20, y + 12);
+            doc.save('payment_report.pdf');
+            showNotification('📄 PDF তৈরি', 'পেমেন্ট রিপোর্ট ডাউনলোড হয়েছে!');
+        }
+
+        function generateAttendanceReport() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.setFillColor(30, 58, 95);
+            doc.rect(0, 0, 210, 30, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(18);
+            doc.text('NRS ACADEMY - Attendance Report', 105, 20, { align: 'center' });
+
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(10);
+            let y = 45;
+            doc.setFillColor(240, 240, 240);
+            doc.rect(15, y - 5, 180, 10, 'F');
+            doc.text('ID', 20, y);
+            doc.text('Name', 45, y);
+            doc.text('Class', 85, y);
+            doc.text('Present', 120, y);
+            doc.text('Total', 145, y);
+            doc.text('Percent', 170, y);
+            y += 12;
+
+            students.forEach(s => {
+                const total = s.totalClasses || 24;
+                const present = s.attendance || 0;
+                const percent = total > 0 ? ((present / total) * 100).toFixed(1) : 0;
+                if (y > 270) { doc.addPage();
+                    y = 20; }
+                doc.text(s.id, 20, y);
+                doc.text(s.name.substring(0, 15), 45, y);
+                doc.text(s.class.substring(0, 10), 85, y);
+                doc.text(`${present}`, 120, y);
+                doc.text(`${total}`, 145, y);
+                doc.text(`${percent}%`, 170, y);
+                y += 8;
+            });
+
+            y += 5;
+            const totalPresent = students.reduce((sum, s) => sum + (s.attendance || 0), 0);
+            const totalClasses = students.reduce((sum, s) => sum + (s.totalClasses || 24), 0);
+            const overallPercent = totalClasses > 0 ? ((totalPresent / totalClasses) * 100).toFixed(1) : 0;
+            doc.line(15, y - 2, 195, y - 2);
+            doc.text(`Overall Attendance: ${overallPercent}% (${totalPresent}/${totalClasses})`, 20, y + 5);
+            doc.text(`Generated: ${new Date().toLocaleString()}`, 20, y + 12);
+            doc.save('attendance_report.pdf');
+            showNotification('📄 PDF তৈরি', 'উপস্থিতি রিপোর্ট ডাউনলোড হয়েছে!');
+        }
+
+        function generateMarksReport() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.setFillColor(30, 58, 95);
+            doc.rect(0, 0, 210, 30, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(18);
+            doc.text('NRS ACADEMY - Marks Report', 105, 20, { align: 'center' });
+
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(10);
+            let y = 45;
+            doc.setFillColor(240, 240, 240);
+            doc.rect(15, y - 5, 180, 10, 'F');
+            doc.text('ID', 20, y);
+            doc.text('Name', 45, y);
+            doc.text('Subject', 85, y);
+            doc.text('Obtained', 120, y);
+            doc.text('Total', 145, y);
+            doc.text('Percent', 170, y);
+            y += 12;
+
+            marksRecords.forEach(m => {
+                const student = students.find(s => s.id === m.studentId);
+                const percent = m.total > 0 ? ((m.obtained / m.total) * 100).toFixed(1) : 0;
+                if (y > 270) { doc.addPage();
+                    y = 20; }
+                doc.text(m.studentId, 20, y);
+                doc.text(student ? student.name.substring(0, 15) : m.studentId, 45, y);
+                doc.text((m.subject || 'English').substring(0, 12), 85, y);
+                doc.text(`${m.obtained}`, 120, y);
+                doc.text(`${m.total}`, 145, y);
+                doc.text(`${percent}%`, 170, y);
+                y += 8;
+            });
+
+            if (marksRecords.length === 0) doc.text('No marks records found.', 105, 60, { align: 'center' });
+            doc.text(`Generated: ${new Date().toLocaleString()}`, 20, 280);
+            doc.save('marks_report.pdf');
+            showNotification('📄 PDF তৈরি', 'মার্কস রিপোর্ট ডাউনলোড হয়েছে!');
+        }
+
+        function generateFullReport() {
+            generateAttendanceReport();
+            setTimeout(() => generatePaymentReport(), 500);
+            setTimeout(() => generateMarksReport(), 1000);
+            showNotification('📄 রিপোর্ট জেনারেট', 'সমস্ত রিপোর্ট ডাউনলোড হচ্ছে...');
+        }
+
+
+        // ===================== STUDENT CRUD =====================
+        function openAddModal() {
+            document.getElementById('editIndex').value = '-1';
+            document.getElementById('modalTitle').textContent = 'নতুন শিক্ষার্থী';
+            document.querySelectorAll('#studentModal input, #studentModal select').forEach(el => el.value = '');
+            document.getElementById('formTotalClasses').value = '24';
+            document.getElementById('formStatus').value = 'active';
+            document.getElementById('studentModal').classList.remove('hidden');
+        }
+
+        function editStudent(index) {
+            const s = students[index];
+            document.getElementById('editIndex').value = index;
+            document.getElementById('modalTitle').textContent = 'শিক্ষার্থী সম্পাদনা';
+            document.getElementById('formId').value = s.id;
+            document.getElementById('formPassword').value = s.password || '';
+            document.getElementById('formName').value = s.name;
+            document.getElementById('formClass').value = s.class;
+            document.getElementById('formBatch').value = s.batch || '';
+            document.getElementById('formRoll').value = s.roll;
+            document.getElementById('formPhone').value = s.phone || '';
+            document.getElementById('formGuardian').value = s.guardian || '';
+            document.getElementById('formGuardianPhone').value = s.guardianPhone || '';
+            document.getElementById('formAttendance').value = s.attendance || 0;
+            document.getElementById('formTotalClasses').value = s.totalClasses || 24;
+            document.getElementById('formMarks').value = s.marks || 0;
+            document.getElementById('formFee').value = s.fee || 0;
+            document.getElementById('formPaid').value = s.paid || 0;
+            document.getElementById('formStatus').value = s.status || 'active';
+            document.getElementById('studentModal').classList.remove('hidden');
+        }
+
+        function closeModal() { document.getElementById('studentModal').classList.add('hidden'); }
+
+        function saveStudent() {
+            const id = document.getElementById('formId').value.trim().toUpperCase();
+            const password = document.getElementById('formPassword').value.trim() || id + '123';
+            const name = document.getElementById('formName').value.trim();
+            const cls = document.getElementById('formClass').value.trim();
+            const batch = document.getElementById('formBatch').value.trim();
+            const roll = document.getElementById('formRoll').value.trim();
+            const phone = document.getElementById('formPhone').value.trim();
+            const guardian = document.getElementById('formGuardian').value.trim();
+            const guardianPhone = document.getElementById('formGuardianPhone').value.trim();
+            const attendance = parseInt(document.getElementById('formAttendance').value) || 0;
+            const totalClasses = parseInt(document.getElementById('formTotalClasses').value) || 24;
+            const marks = parseInt(document.getElementById('formMarks').value) || 0;
+            const fee = parseFloat(document.getElementById('formFee').value) || 0;
+            const paid = parseFloat(document.getElementById('formPaid').value) || 0;
+            const status = document.getElementById('formStatus').value;
+            const editIndex = parseInt(document.getElementById('editIndex').value);
+
+            if (!id || !name || !cls || !roll) { alert('আইডি, নাম, ক্লাস এবং রোল অবশ্যই পূরণ করতে হবে।'); return; }
+            if (paid > fee) { alert('পরিশোধের পরিমাণ মাসিক ফি-এর বেশি হতে পারে না!'); return; }
+
+            const existing = students.findIndex(s => s.id === id);
+            if (editIndex === -1) {
+                if (existing !== -1) { alert('এই আইডি ইতিমধ্যেই আছে।'); return; }
+                students.push({ id, password, name, class: cls, batch: batch || 'A', roll, phone, guardian, guardianPhone,
+                    attendance, totalClasses, marks, fee, paid, status, admissionDate: new Date().toISOString().split(
+                        'T')[0] });
+                showNotification('✅ নতুন শিক্ষার্থী', `${name} যোগ করা হয়েছে!`);
+            } else {
+                if (existing !== -1 && existing !== editIndex) { alert('এই আইডি অন্য কারো জন্য ব্যবহৃত।'); return; }
+                students[editIndex] = { ...students[editIndex], id, password, name, class: cls, batch: batch || 'A', roll,
+                    phone, guardian, guardianPhone, attendance, totalClasses, marks, fee, paid, status };
+                showNotification('✅ আপডেট', `${name} এর তথ্য আপডেট করা হয়েছে!`);
+            }
+
+            saveData();
+            closeModal();
+            renderAll();
+        }
+
+        function deleteStudent(index) {
+            if (!confirm('এই শিক্ষার্থীকে ডিলিট করতে চান?')) return;
+            const student = students[index];
+            students.splice(index, 1);
+            saveData();
+            renderAll();
+            showNotification('🗑️ ডিলিট', `${student.name} ডিলিট করা হয়েছে।`);
+        }
+
+
+        // ===================== SHARE =====================
+        function shareDashboard() { document.getElementById('shareModal').classList.remove('hidden'); }
+
+        function closeShareModal() { document.getElementById('shareModal').classList.add('hidden'); }
+
+        function shareWhatsApp() {
+            const text = generateShareText();
+            window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+        }
+
+        function shareFacebook() {
+            const text = generateShareText();
+            window.open(`https://www.facebook.com/sharer/sharer.php?quote=${encodeURIComponent(text)}`, '_blank');
+        }
+
+        function copyShareLink() {
+            const text = generateShareText();
+            navigator.clipboard.writeText(text).then(() => { showNotification('✅ কপি হয়েছে', 'লিংক কপি হয়েছে!'); });
+        }
+
+        function generateShareText() {
+            const total = students.length;
+            const active = students.filter(s => s.status === 'active').length;
+            const totalDue = students.reduce((sum, s) => sum + ((s.fee || 0) - (s.paid || 0)), 0);
+            const totalCollection = students.reduce((sum, s) => sum + (s.paid || 0), 0);
+            return `🏫 NRS Academy - ড্যাশবোর্ড রিপোর্ট\n\n📊 মোট শিক্ষার্থী: ${total} জন\n✅ সক্রিয়: ${active} জন\n💰 মোট কালেকশন: ৳${totalCollection.toLocaleString()}\n⚠️ মোট বাকি: ৳${totalDue.toLocaleString()}\n📅 তারিখ: ${new Date().toLocaleDateString('bn-BD')}\n\n#NRS_Academy`;
+        }
+
+
+        // ===================== AUTO DUE CALCULATION =====================
+        function calculateMonthlyDue() {
+            students.forEach(s => {
+                const fee = s.fee || 0;
+                if (s.paid > fee) s.paid = fee;
+            });
+            saveData();
+        }
+
+
+        // ===================== INIT =====================
+        loadData();
+        calculateMonthlyDue();
+
+        // Start Firebase real-time listeners
+        if (firebaseInitialized && db) {
+            listenToFirebase();
+            // Auto sync on load
+            setTimeout(syncData, 2000);
+        }
+
+        // Enter key support
+        document.getElementById('studentIdInput').addEventListener('keypress', e => { if (e.key === 'Enter') studentLogin(); });
+        document.getElementById('studentPasswordInput').addEventListener('keypress', e => { if (e.key === 'Enter')
+                studentLogin(); });
+        document.getElementById('adminPasswordInput').addEventListener('keypress', e => { if (e.key === 'Enter')
+            adminLogin(); });
+
+        // Click outside modals
+        document.getElementById('profileModal').addEventListener('click', function(e) { if (e.target === this)
+            closeProfileModal(); });
+        document.getElementById('studentModal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+        document.getElementById('marksModal').addEventListener('click', function(e) { if (e.target === this)
+            closeMarksModal(); });
+        document.getElementById('shareModal').addEventListener('click', function(e) { if (e.target === this)
+            closeShareModal(); });
+        document.getElementById('paymentModal').addEventListener('click', function(e) { if (e.target === this)
+            closePaymentModal(); });
+
+        console.log('🚀 NRS Academy with Firebase Cloud Database loaded!');
+        console.log('👨‍🎓 Students:', students.length);
+        console.log('☁️ Firebase:', firebaseInitialized ? 'Connected ✅' : 'Offline ⚠️');
+        console.log('🔑 Admin Password:', adminPassword);
+
+        // Show welcome notification
+        setTimeout(() => {
+            if (!isPWAInstalled) {
+                showNotification('👋 স্বাগতম!', 'NRS Academy-তে আপনাকে স্বাগতম। অ্যাপ ইনস্টল করতে নিচের বাটনে ক্লিক করুন।');
+            }
+            if (firebaseInitialized) {
+                showNotification('☁️ ক্লাউড সংযুক্ত', 'আপনার ডেটা নিরাপদে ক্লাউডে সংরক্ষিত হচ্ছে।');
+            }
+        }, 1500);
+    </script>
+</body>
+</html>
